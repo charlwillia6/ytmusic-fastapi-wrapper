@@ -1,4 +1,4 @@
-# ytmusic-playlist-studio-backend
+# ytmusic-fastapi-wrapper
 
 This project is a backend REST API built with FastAPI that wraps the ytmusicapi library. It provides endpoints for managing YouTube Music playlists and accessing the user's music library. It also handles authentication via Google OAuth 2.0 and manages user sessions using a SQLite database.
 
@@ -7,11 +7,11 @@ This project is a backend REST API built with FastAPI that wraps the ytmusicapi 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/charlwillia6/ytmusic-playlist-creator-backend.git
-   cd ytmusic-playlist-creator-backend
+   git clone https://github.com/charlwillia6/ytmusic-fastapi-wrapper.git
+   cd ytmusic-fastapi-wrapper
    ```
 
-2. Navigate to the project directory: `cd ytmusic-playlist-backend`
+2. Navigate to the project directory: `cd ytmusic-fastapi-wrapper`
 3. Create a virtual environment: `python -m venv venv`
 4. Activate the virtual environment:
 
@@ -91,16 +91,16 @@ For detailed API endpoint documentation and usage examples, please see [API_USAG
 To deploy the application to Google Cloud Run, you will need to:
 
 1. Install and configure the Google Cloud SDK (`gcloud`).
-2. Build the Docker image: `docker build -t ytmusic-playlist-backend .`
-3. Tag the image for Google Container Registry: `docker tag ytmusic-playlist-backend gcr.io/[your-project-id]/ytmusic-playlist-backend`
-4. Push the image to Google Container Registry: `docker push gcr.io/[your-project-id]/ytmusic-playlist-backend`
-5. Deploy the image to Google Cloud Run: `gcloud run deploy ytmusic-playlist-backend --image gcr.io/[your-project-id]/ytmusic-playlist-backend --platform managed --allow-unauthenticated --port 8080`
+2. Build the Docker image: `docker build -t ytmusic-fastapi-wrapper .`
+3. Tag the image for Google Container Registry: `docker tag ytmusic-fastapi-wrapper gcr.io/[your-project-id]/ytmusic-fastapi-wrapper`
+4. Push the image to Google Container Registry: `docker push gcr.io/[your-project-id]/ytmusic-fastapi-wrapper`
+5. Deploy the image to Google Cloud Run: `gcloud run deploy ytmusic-fastapi-wrapper --image gcr.io/[your-project-id]/ytmusic-fastapi-wrapper --platform managed --allow-unauthenticated --port 8080`
 
 Replace `[your-project-id]` with your actual Google Cloud project ID.
 
 ## Testing
 
-This section provides detailed instructions on how to run and understand the test suite for the YTMusic Playlist Creator Backend.
+This section provides detailed instructions on how to run and understand the test suite for the YTMusic FastAPI Wrapper.
 
 ### Test Structure
 
