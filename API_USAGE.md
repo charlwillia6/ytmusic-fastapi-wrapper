@@ -757,3 +757,5 @@ All endpoints may return the following error responses:
     "detail": "Error message from YTMusic API"
 }
 ```
+
+For information about error handling and retries, please see the Error Handling and Retries section in [README.md](README.md#error-handling-and-retries).

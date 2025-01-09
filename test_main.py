@@ -8,13 +8,14 @@ import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+# Set test environment variables
+os.environ["GOOGLE_CLIENT_ID"] = "test_client_id"
+os.environ["GOOGLE_CLIENT_SECRET"] = "test_client_secret"
+os.environ["GOOGLE_REDIRECT_URI"] = "http://localhost:8000/callback"
 
 def get_test_app():
-    # Set environment variables
-    os.environ["GOOGLE_CLIENT_ID"] = "test_client_id"
-    os.environ["GOOGLE_CLIENT_SECRET"] = "test_client_secret"
-    os.environ["GOOGLE_REDIRECT_URI"] = "http://localhost:8000/callback"
-    
     # Import and return the app
     from main import app, get_db
     return app, get_db
@@ -52,6 +53,11 @@ def client(test_db):
         finally:
             test_db.rollback()
     
+    # Set environment variables before importing main
+    os.environ["GOOGLE_CLIENT_ID"] = "test_client_id"
+    os.environ["GOOGLE_CLIENT_SECRET"] = "test_client_secret"
+    os.environ["GOOGLE_REDIRECT_URI"] = "http://localhost:8000/callback"
+    
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
@@ -78,7 +84,8 @@ def create_test_session(test_db: Session) -> str:
         test_session = DBSession(
             user_id=test_credentials.id, 
             session_token=session_token, 
-            expires_at=expires_at
+            expires_at=expires_at,
+            is_active=True  # Add this line to set is_active
         )
         test_db.add(test_session)
         test_db.commit()
@@ -759,3 +766,7 @@ def test_get_library_upload_album(mock_ytmusic, client, test_db):
     )
     assert response.status_code == 200
     assert "album" in response.json()
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def fetch_token_with_retry(flow, code):
+    return flow.fetch_token(code=code)

@@ -86,6 +86,9 @@ celerybeat-schedule
 # dotenv
 .env
 
+# OAuth
+client_secrets.json
+
 # virtualenv
 venv/
 .aider*

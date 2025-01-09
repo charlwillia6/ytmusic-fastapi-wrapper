@@ -21,6 +21,14 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI")
 
+# Debug prints
+DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+if DEBUG:
+    print("Environment variables loaded:")
+    print(f"GOOGLE_CLIENT_ID: {GOOGLE_CLIENT_ID[:10]}..." if GOOGLE_CLIENT_ID else "Not set")
+    print(f"GOOGLE_CLIENT_SECRET: {GOOGLE_CLIENT_SECRET[:5]}..." if GOOGLE_CLIENT_SECRET else "Not set")
+    print(f"GOOGLE_REDIRECT_URI: {GOOGLE_REDIRECT_URI}" if GOOGLE_REDIRECT_URI else "Not set")
+
 # Environment variable validation
 if not all([GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI]):
     raise ValueError("Missing required environment variables")
@@ -212,18 +220,12 @@ async def global_exception_handler(_: Request, exc: Exception):
 
 # OAuth helper function
 def get_oauth_flow():
-    return Flow.from_client_config(
-        {
-            "web": {
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "redirect_uris": [GOOGLE_REDIRECT_URI],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
+    flow = Flow.from_client_secrets_file(
+        'client_secrets.json',
         scopes=SCOPES,
+        redirect_uri=GOOGLE_REDIRECT_URI
     )
+    return flow
 
 # Auth Endpoints
 @app.get("/auth/login")
@@ -232,12 +234,17 @@ async def login():
     Redirect to Google OAuth login page
     """
     flow = get_oauth_flow()
-
+    
     authorization_url, state = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes=True,
+        include_granted_scopes="true",
         prompt="consent"
     )
+    
+    if DEBUG:
+        print(f"Authorization URL: {authorization_url}")
+        print(f"State: {state}")
+        print(f"Redirect URI: {GOOGLE_REDIRECT_URI}")
 
     return RedirectResponse(
         url=authorization_url,
@@ -249,34 +256,55 @@ async def read_root():
     return {"Hello": "World"}
 
 @app.get("/auth/callback")
-async def callback(code: str, state: str, db: Session = Depends(get_db)):
-    flow = get_oauth_flow()
-
+async def auth_callback(
+    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None
+):
+    """
+    Handle the OAuth callback from Google
+    """
+    if not code:
+        raise HTTPException(status_code=400, detail="No authorization code provided")
+    
     try:
+        flow = get_oauth_flow()
         flow.fetch_token(code=code)
+        
+        credentials = flow.credentials
+        
+        # Store credentials in database
+        db = next(get_db())
+        db_credentials = Credentials(
+            token=credentials.token,
+            refresh_token=credentials.refresh_token,
+            token_uri=credentials.token_uri, # type: ignore
+            client_id=credentials.client_id,
+            client_secret=credentials.client_secret,
+            scopes=",".join(credentials.scopes) if credentials.scopes else ""
+        )
+        db.add(db_credentials)
+        db.commit()
+        
+        # Create session
+        session_token = str(uuid.uuid4())
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        db_session = DBSession(
+            user_id=db_credentials.id,
+            session_token=session_token,
+            expires_at=expires_at
+        )
+        db.add(db_session)
+        db.commit()
+        
+        return {"message": "Authentication successful", "session_token": session_token}
+        
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Token fetch failed: {str(e)}")
-    
-    g_credentials = flow.credentials
-    
-    db_credentials = Credentials(
-        token=g_credentials.token,
-        refresh_token=g_credentials.refresh_token,
-        token_uri=g_credentials.token_uri, # type: ignore
-        client_id=g_credentials.client_id,
-        client_secret=g_credentials.client_secret,
-        scopes=",".join(g_credentials.scopes) if g_credentials.scopes else ""  # Convert list to string
-    )
-    db.add(db_credentials)
-    db.commit()
-
-    session_token = str(uuid.uuid4())
-    expires_at = datetime.utcnow() + timedelta(hours=1)
-    db_session = DBSession(user_id=db_credentials.id, session_token=session_token, expires_at=expires_at)
-    db.add(db_session)
-    db.commit()
-
-    return {"message": "Authentication successful", "session_token": session_token}
+        print(f"Error in callback: {str(e)}")  # Debug print
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to fetch token: {str(e)}"
+        )
 
 @app.get("/auth/user")
 async def get_user(current_user: Annotated[CredentialsModel, Depends(get_current_user)]):

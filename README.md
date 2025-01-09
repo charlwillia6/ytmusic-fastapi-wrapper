@@ -25,13 +25,20 @@ This project is a backend REST API built with FastAPI that wraps the ytmusicapi 
 5. Install the dependencies: `pip install -r requirements.txt`
 6. Set up environment variables:
 
-   - Create a .env file in the project root with the following:
+   - Create a `.env` file in the project root with the following:
 
         ```bash
         GOOGLE_CLIENT_ID=your_client_id
         GOOGLE_CLIENT_SECRET=your_client_secret
         GOOGLE_REDIRECT_URI=http://localhost:8000/auth/callback
         DATABASE_URL=sqlite:///./sessions.db
+        DEBUG=false  # Set to true for debug logging
+        ```
+
+   - Create a `client_secrets.json` file from the example:
+        ```bash
+        cp client_secrets.json.example client_secrets.json
+        # Then edit client_secrets.json with your credentials
         ```
 
         Note: You'll need to:
@@ -39,24 +46,45 @@ This project is a backend REST API built with FastAPI that wraps the ytmusicapi 
         - Create a project in the Google Cloud Console
         - Enable the YouTube Data API v3
         - Create OAuth 2.0 credentials
-        - Add <http://localhost:8000/auth/callback> to the authorized redirect URIs
+        - Add http://localhost:8000/auth/callback to the authorized redirect URIs
+        - Update both .env and client_secrets.json with your credentials
 
 7. Run the application: `uvicorn main:app --reload --port 8000`
 8. Access the application:
-   - API: <http://localhost:8000>
-   - Interactive API documentation: <http://localhost:8000/doc>
-   - Alternative API documentation: <http://localhost:8000/redoc>
+   - API: http://localhost:8000
+   - Interactive API documentation: http://localhost:8000/docs
+   - Alternative API documentation: http://localhost:8000/redoc
 
 ### Development Tools
 
 - API Documentation: FastAPI automatically generates interactive API documentation at /docs and /redoc
 - Hot Reload: The --reload flag enables automatic reloading when code changes are detected
 - Database: SQLite database file will be created automatically in your project directory
-- Debug Mode: Add --debug flag to uvicorn command for detailed logs
+- Debug Mode: Set DEBUG=true in .env file for detailed logs
+- OAuth Retry: Built-in retry mechanism for token fetching with exponential backoff
+
+### Error Handling and Retries
+
+The API includes built-in retry mechanisms for certain operations:
+
+1. Token Fetching: Automatically retries up to 3 times with exponential backoff
+   - First retry: 4 seconds
+   - Second retry: 8 seconds
+   - Third retry: 16 seconds
+
+2. Debug Mode: Set `DEBUG=true` in your `.env` file to get detailed error logs, including:
+   - OAuth flow details
+   - Token fetch attempts
+   - API request/response information
+
+3. Session Management:
+   - Sessions automatically expire after 1 hour
+   - Expired sessions are automatically cleaned up
+   - Invalid sessions return 401 Unauthorized
 
 ## API Documentation
 
-For detailed API endpoint documentation and usage examples, please see [USAGE.md](USAGE.md).
+For detailed API endpoint documentation and usage examples, please see [API_USAGE.md](API_USAGE.md).
 
 ## Deployment
 
