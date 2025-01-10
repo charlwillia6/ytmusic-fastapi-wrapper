@@ -95,3 +95,6 @@ venv/
 
 # Local files
 .vscode/
+
+# SQLite Databases
+sessions.db
