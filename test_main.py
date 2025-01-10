@@ -115,30 +115,59 @@ def test_auth_login(mock_get_oauth_flow, client):
 
 @patch("main.Flow.from_client_config")
 def test_auth_callback(mock_flow, client, test_db):
-    mock_flow_instance = mock_flow.return_value
-    mock_flow_instance.fetch_token.return_value = None
-    mock_flow_instance.credentials = Mock(
+    # Create a more complete mock credentials object with all required attributes
+    mock_credentials = Mock(
         token="test_token",
         refresh_token="test_refresh_token",
         token_uri="test_token_uri",
         client_id="test_client_id",
         client_secret="test_client_secret",
-        scopes=["test_scope"]
+        scopes=["test_scope"],
+        expiry=None,
+        quota_project_id=None,
+        _quota_project_id=None,
+        _scopes=["test_scope"],
+        _default_scopes=None,
+        _token_uri="test_token_uri",
+        _refresh_token="test_refresh_token",
+        _client_id="test_client_id",
+        _client_secret="test_client_secret"
     )
+    
+    # Setup the mock flow instance
+    mock_flow_instance = Mock()
+    mock_flow_instance.credentials = mock_credentials
+    mock_flow_instance.fetch_token.return_value = {
+        "access_token": "test_token",
+        "refresh_token": "test_refresh_token",
+        "token_uri": "test_token_uri",
+        "client_id": "test_client_id",
+        "client_secret": "test_client_secret",
+        "scopes": ["test_scope"]
+    }
     mock_flow.return_value = mock_flow_instance
+
+    # Make sure the database is clean
+    test_db.query(Credentials).delete()
+    test_db.query(DBSession).delete()
+    test_db.commit()
     
     response = client.get("/auth/callback?code=testcode&state=teststate")
+    
+    # Force commit any pending transactions
+    test_db.commit()
+    
     assert response.status_code == 200
     assert response.json()["message"] == "Authentication successful"
     assert "session_token" in response.json()
 
     # Check if credentials and session are stored in the database
     credentials = test_db.query(Credentials).first()
-    assert credentials is not None
+    assert credentials is not None, "Credentials were not saved to database"
     assert credentials.token == "test_token"
     
     session = test_db.query(DBSession).first()
-    assert session is not None
+    assert session is not None, "Session was not saved to database"
     assert session.user_id == credentials.id
 
 def test_get_user(client, test_db):

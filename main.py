@@ -124,7 +124,9 @@ class SearchSuggestion(BaseModel):
 class SearchSuggestionsRequest(BaseModel):
     suggestions: List[SearchSuggestion]
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"]
+SCOPES = [
+    'https://www.googleapis.com/auth/youtube.readonly'
+]
 
 # Dependency to get the database session
 def get_db():
@@ -258,51 +260,61 @@ async def read_root():
 @app.get("/auth/callback")
 async def auth_callback(
     request: Request,
-    code: Optional[str] = None,
-    state: Optional[str] = None
+    code: str,
+    state: str,
+    db: Session = Depends(get_db)
 ):
     """
     Handle the OAuth callback from Google
     """
-    if not code:
-        raise HTTPException(status_code=400, detail="No authorization code provided")
-    
     try:
-        flow = get_oauth_flow()
+        flow = Flow.from_client_secrets_file(
+            'client_secrets.json',
+            scopes=SCOPES,
+            redirect_uri=GOOGLE_REDIRECT_URI
+        )
+        
+        # Fetch the token
         flow.fetch_token(code=code)
         
+        # Get credentials from the flow
         credentials = flow.credentials
         
-        # Store credentials in database
-        db = next(get_db())
+        # Create a new credentials record
         db_credentials = Credentials(
             token=credentials.token,
             refresh_token=credentials.refresh_token,
             token_uri=credentials.token_uri, # type: ignore
             client_id=credentials.client_id,
             client_secret=credentials.client_secret,
-            scopes=",".join(credentials.scopes) if credentials.scopes else ""
+            scopes=",".join(credentials.scopes) if credentials.scopes else None
         )
-        db.add(db_credentials)
-        db.commit()
         
-        # Create session
+        db.add(db_credentials)
+        db.flush()  # Flush to get the ID without committing
+        
+        # Create a new session
         session_token = str(uuid.uuid4())
         expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        
         db_session = DBSession(
             user_id=db_credentials.id,
             session_token=session_token,
             expires_at=expires_at
         )
+        
         db.add(db_session)
         db.commit()
         
-        return {"message": "Authentication successful", "session_token": session_token}
+        return {
+            "message": "Authentication successful",
+            "session_token": session_token
+        }
         
     except Exception as e:
-        print(f"Error in callback: {str(e)}")  # Debug print
+        db.rollback()
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch token: {str(e)}"
         )
 
