@@ -2,6 +2,14 @@
 
 This project is a backend REST API built with FastAPI that wraps the ytmusicapi library. It provides endpoints for managing YouTube Music playlists and accessing the user's music library. It also handles authentication via Google OAuth 2.0 and manages user sessions using a SQLite database.
 
+## Acknowledgments
+
+This project is built upon the excellent [ytmusicapi](https://github.com/sigma67/ytmusicapi) library. We extend our sincere gratitude to the ytmusicapi developers and contributors for creating and maintaining such a robust foundation that makes this wrapper possible. The ytmusicapi library provides the core functionality for interacting with YouTube's internal APIs, which this project leverages to provide a REST API interface. For more information about the underlying library, please visit the [ytmusicapi documentation](https://ytmusicapi.readthedocs.io/).
+
+## Disclaimer
+
+This project is an independent, unofficial implementation and is not affiliated with, endorsed by, or in any way officially connected to YouTube, YouTube Music, or Google LLC. The ytmusicapi library that this project depends on provides unofficial access to YouTube's internal APIs. While we strive to maintain compatibility, please be aware that as an unofficial API, functionality may change without notice if YouTube Music modifies their internal systems. Use of this software is at your own discretion and risk.
+
 ## Development Setup
 
 1. Clone the repository:
@@ -36,6 +44,7 @@ This project is a backend REST API built with FastAPI that wraps the ytmusicapi 
         ```
 
    - Create a `client_secrets.json` file from the example:
+
         ```bash
         cp client_secrets.json.example client_secrets.json
         # Then edit client_secrets.json with your credentials
@@ -46,14 +55,14 @@ This project is a backend REST API built with FastAPI that wraps the ytmusicapi 
         - Create a project in the Google Cloud Console
         - Enable the YouTube Data API v3
         - Create OAuth 2.0 credentials
-        - Add http://localhost:8000/auth/callback to the authorized redirect URIs
+        - Add <http://localhost:8000/auth/callback> to the authorized redirect URIs
         - Update both .env and client_secrets.json with your credentials
 
 7. Run the application: `uvicorn main:app --reload --port 8000`
 8. Access the application:
-   - API: http://localhost:8000
-   - Interactive API documentation: http://localhost:8000/docs
-   - Alternative API documentation: http://localhost:8000/redoc
+   - API: <http://localhost:8000>
+   - Interactive API documentation: <http://localhost:8000/docs>
+   - Alternative API documentation: <http://localhost:8000/redoc>
 
 ### Development Tools
 
@@ -293,3 +302,7 @@ When contributing new tests:
 - [pytest Documentation](https://docs.pytest.org/)
 - [FastAPI Testing Documentation](https://fastapi.tiangolo.com/tutorial/testing/)
 - [YTMusic API Documentation](https://ytmusicapi.readthedocs.io/)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
