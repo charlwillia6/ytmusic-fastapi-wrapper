@@ -1,308 +1,182 @@
-# ytmusic-fastapi-wrapper
+# YTMusic FastAPI Wrapper
 
-This project is a backend REST API built with FastAPI that wraps the ytmusicapi library. It provides endpoints for managing YouTube Music playlists and accessing the user's music library. It also handles authentication via Google OAuth 2.0 and manages user sessions using a SQLite database.
+A FastAPI-based wrapper for the YouTube Music API that provides a RESTful interface for interacting with YouTube Music.
 
-## Acknowledgments
+## Project Structure
 
-This project is built upon the excellent [ytmusicapi](https://github.com/sigma67/ytmusicapi) library. We extend our sincere gratitude to the ytmusicapi developers and contributors for creating and maintaining such a robust foundation that makes this wrapper possible. The ytmusicapi library provides the core functionality for interacting with YouTube's internal APIs, which this project leverages to provide a REST API interface. For more information about the underlying library, please visit the [ytmusicapi documentation](https://ytmusicapi.readthedocs.io/).
+```
+ytmusic-fastapi-wrapper/
+├── app/
+│   ├── api/
+│   │   └── v1/
+│   │       ├── endpoints/
+│   │       │   ├── auth.py
+│   │       │   ├── browse.py
+│   │       │   ├── explore.py
+│   │       │   ├── library.py
+│   │       │   ├── playlists.py
+│   │       │   ├── podcasts.py
+│   │       │   ├── search.py
+│   │       │   ├── uploads.py
+│   │       │   └── watch.py
+│   │       └── router.py
+│   ├── core/
+│   │   ├── config.py
+│   │   └── security.py
+│   ├── db/
+│   │   ├── models.py
+│   │   └── session.py
+│   ├── schemas/
+│   │   └── models.py
+│   ├── services/
+│   │   └── ytmusic.py
+│   └── main.py
+├── tests/
+│   ├── test_api/
+│   │   ├── test_auth.py
+│   │   ├── test_browse.py
+│   │   ├── test_library.py
+│   │   ├── test_playlists.py
+│   │   └── test_search.py
+│   ├── test_services/
+│   │   └── test_ytmusic.py
+│   └── conftest.py
+├── .env
+├── .gitignore
+├── Dockerfile
+├── README.md
+└── requirements.txt
+```
 
-## Disclaimer
+## Features
 
-This project is an independent, unofficial implementation and is not affiliated with, endorsed by, or in any way officially connected to YouTube, YouTube Music, or Google LLC. The ytmusicapi library that this project depends on provides unofficial access to YouTube's internal APIs. While we strive to maintain compatibility, please be aware that as an unofficial API, functionality may change without notice if YouTube Music modifies their internal systems. Use of this software is at your own discretion and risk.
+- OAuth2 authentication with YouTube API
+- Playlist management (create, edit, delete)
+- Search functionality
+- Library management
+- Browse functionality
+- Upload management
 
-## Development Setup
+## Prerequisites
+
+- Python 3.8+
+- pip
+- Google OAuth2 credentials
+
+## Installation
 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/charlwillia6/ytmusic-fastapi-wrapper.git
+   git clone https://github.com/yourusername/ytmusic-fastapi-wrapper.git
    cd ytmusic-fastapi-wrapper
    ```
 
-2. Navigate to the project directory: `cd ytmusic-fastapi-wrapper`
-3. Create a virtual environment: `python -m venv venv`
-4. Activate the virtual environment:
+2. Create and activate a virtual environment:
 
    ```bash
-   # On Windows:
-    .\venv\Scripts\activate
-    # On Unix or MacOS:
-    source venv/bin/activate
-    ```
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # or
+   .\venv\Scripts\activate  # Windows
+   ```
 
-5. Install the dependencies: `pip install -r requirements.txt`
-6. Set up environment variables:
+3. Install dependencies:
 
-   - Create a `.env` file in the project root with the following:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-        ```bash
-        GOOGLE_CLIENT_ID=your_client_id
-        GOOGLE_CLIENT_SECRET=your_client_secret
-        GOOGLE_REDIRECT_URI=http://localhost:8000/auth/callback
-        DATABASE_URL=sqlite:///./sessions.db
-        DEBUG=false  # Set to true for debug logging
-        ```
+4. Create a `.env` file with your OAuth2 credentials:
 
-   - Create a `client_secrets.json` file from the example:
+   ```env
+   GOOGLE_CLIENT_ID=your_client_id
+   GOOGLE_CLIENT_SECRET=your_client_secret
+   GOOGLE_REDIRECT_URI=http://localhost:8000/api/v1/auth/callback
+   DATABASE_URL=sqlite:///./app.db  # SQLite database URL (default)
+   DEBUG=false  # Set to true for debug mode
+   ```
 
-        ```bash
-        cp client_secrets.json.example client_secrets.json
-        # Then edit client_secrets.json with your credentials
-        ```
+5. Get your YouTube tokens:
 
-        Note: You'll need to:
+   ```bash
+   python scripts/get_tokens.py
+   ```
 
-        - Create a project in the Google Cloud Console
-        - Enable the YouTube Data API v3
-        - Create OAuth 2.0 credentials
-        - Add <http://localhost:8000/auth/callback> to the authorized redirect URIs
-        - Update both .env and client_secrets.json with your credentials
+   Follow the prompts and add the generated YT_* variables to your .env file.
 
-7. Run the application: `uvicorn main:app --reload --port 8000`
-8. Access the application:
-   - API: <http://localhost:8000>
-   - Interactive API documentation: <http://localhost:8000/docs>
-   - Alternative API documentation: <http://localhost:8000/redoc>
+## Running the Application
 
-### Development Tools
+1. Start the server:
 
-- API Documentation: FastAPI automatically generates interactive API documentation at /docs and /redoc
-- Hot Reload: The --reload flag enables automatic reloading when code changes are detected
-- Database: SQLite database file will be created automatically in your project directory
-- Debug Mode: Set DEBUG=true in .env file for detailed logs
-- OAuth Retry: Built-in retry mechanism for token fetching with exponential backoff
+   ```bash
+   uvicorn app.main:app --reload
+   ```
 
-### Error Handling and Retries
-
-The API includes built-in retry mechanisms for certain operations:
-
-1. Token Fetching: Automatically retries up to 3 times with exponential backoff
-   - First retry: 4 seconds
-   - Second retry: 8 seconds
-   - Third retry: 16 seconds
-
-2. Debug Mode: Set `DEBUG=true` in your `.env` file to get detailed error logs, including:
-   - OAuth flow details
-   - Token fetch attempts
-   - API request/response information
-
-3. Session Management:
-   - Sessions automatically expire after 1 hour
-   - Expired sessions are automatically cleaned up
-   - Invalid sessions return 401 Unauthorized
-
-## API Documentation
-
-For detailed API endpoint documentation and usage examples, please see [API_USAGE.md](API_USAGE.md).
-
-## Deployment
-
-To deploy the application to Google Cloud Run, you will need to:
-
-1. Install and configure the Google Cloud SDK (`gcloud`).
-2. Build the Docker image: `docker build -t ytmusic-fastapi-wrapper .`
-3. Tag the image for Google Container Registry: `docker tag ytmusic-fastapi-wrapper gcr.io/[your-project-id]/ytmusic-fastapi-wrapper`
-4. Push the image to Google Container Registry: `docker push gcr.io/[your-project-id]/ytmusic-fastapi-wrapper`
-5. Deploy the image to Google Cloud Run: `gcloud run deploy ytmusic-fastapi-wrapper --image gcr.io/[your-project-id]/ytmusic-fastapi-wrapper --platform managed --allow-unauthenticated --port 8080`
-
-Replace `[your-project-id]` with your actual Google Cloud project ID.
+2. Visit `http://localhost:8000/docs` for the interactive API documentation.
 
 ## Testing
 
-This section provides detailed instructions on how to run and understand the test suite for the YTMusic FastAPI Wrapper.
+The project includes a comprehensive test suite that covers API endpoints and services. Tests are organized to mirror the application structure:
 
-### Test Structure
+- `tests/test_api/`: Tests for API endpoints
+- `tests/test_services/`: Tests for service layer
+- `tests/conftest.py`: Shared test fixtures and configuration
 
-The test suite consists of two main test files:
-
-- `test_main.py`: Tests the FastAPI endpoints and application logic
-- `test_ytmusic.py`: Tests the YTMusic integration functionality separately
-
-### Prerequisites
-
-Before running the tests, ensure you have the following installed:
-
-1. Python 3.8 or higher
-2. Virtual environment (recommended)
-3. Required packages:
+To run the tests:
 
 ```bash
-pip install pytest pytest-mock pytest-asyncio httpx fastapi sqlalchemy ytmusicapi python-dotenv
+# Run all tests
+pytest
+
+# Run tests with coverage report
+pytest --cov=app
+
+# Run specific test file
+pytest tests/test_api/test_auth.py
+
+# Run tests with verbose output
+pytest -v
 ```
 
-### Setting Up the Test Environment
+The test suite uses pytest fixtures for:
 
-1. Create a `.env` file for testing:
+- FastAPI test client
+- Authentication headers
+- Mock YTMusic service
 
-```env
-GOOGLE_CLIENT_ID=your_test_client_id
-GOOGLE_CLIENT_SECRET=your_test_client_secret
-GOOGLE_REDIRECT_URI=http://localhost:8000/auth/callback
+Tests are written using pytest and include:
 
-# For integration tests (optional)
-YT_TOKEN=your_youtube_token
-YT_REFRESH_TOKEN=your_refresh_token
-YT_TOKEN_URI=your_token_uri
-YT_CLIENT_ID=your_client_id
-YT_CLIENT_SECRET=your_client_secret
-YT_SCOPES=https://www.googleapis.com/auth/youtube.readonly
-```
+- Unit tests for all endpoints
+- Authentication flow testing
+- Service layer mocking
+- Error handling verification
 
-### Running the Tests
+## Contributing
 
-#### Running FastAPI Tests (test_main.py)
-
-These tests cover the API endpoints and application logic:
-
-```bash
-# Run all FastAPI tests
-pytest test_main.py -v
-
-# Run specific test
-pytest test_main.py -v -k "test_create_playlist"
-
-# Run with coverage report
-pytest test_main.py -v --cov=app --cov-report=term-missing
-```
-
-#### Running YTMusic Integration Tests (test_ytmusic.py)
-
-These tests cover the YTMusic client functionality:
-
-```bash
-# Run all YTMusic tests except integration tests
-pytest test_ytmusic.py -v
-
-# Run including integration tests (requires real credentials)
-pytest test_ytmusic.py -v --runintegration
-
-# Run specific test
-pytest test_ytmusic.py -v -k "test_playlist_creation"
-```
-
-### Test Categories
-
-#### FastAPI Tests (test_main.py)
-
-- Authentication tests
-- Playlist management tests
-- Search functionality tests
-- Library management tests
-- User session tests
-
-#### YTMusic Tests (test_ytmusic.py)
-
-- Playlist operations
-- Search functionality
-- Library management
-- Artist information
-- Song rating
-- Watch playlist functionality
-- Integration tests with real API (optional)
-
-### Understanding Test Output
-
-The test output will show:
-
-- Number of tests run
-- Number of tests passed/failed
-- Test execution time
-- Detailed error messages for failed tests
-
-Example output:
-
-```bash
-============================= test session starts ==============================
-platform win32 -- Python 3.8.0, pytest-6.2.4, py-1.10.0, pluggy-0.13.1
-rootdir: C:\path\to\project
-plugins: hypothesis-6.75.3, cov-4.1.0, asyncio-0.12.0
-collected 20 items
-
-test_main.py::test_auth_login PASSED                                    [  5%]
-test_main.py::test_auth_callback PASSED                                [ 10%]
-...
-```
-
-### Writing New Tests
-
-When adding new tests:
-
-1. For API endpoints (test_main.py):
-
-    ```python
-    @patch("main.YTMusic.your_method")
-    def test_your_endpoint(mock_method, client, test_db):
-        # Arrange
-        mock_method.return_value = your_expected_return
-        
-        # Create test session
-        session_token = create_test_session(test_db)
-        
-        # Act
-        response = client.get("/your-endpoint", headers={"session_token": session_token})
-        
-        # Assert
-        assert response.status_code == 200
-        assert response.json() == expected_response
-    ```
-
-2. For YTMusic functionality (test_ytmusic.py):
-
-    ```python
-    def test_your_ytmusic_function(self, ytmusic_client):
-        # Arrange
-        expected_result = {"your": "test_data"}
-        ytmusic_client.your_method.return_value = expected_result
-        
-        # Act
-        result = ytmusic_client.your_method()
-        
-        # Assert
-        assert result == expected_result
-        ytmusic_client.your_method.assert_called_once()
-    ```
-
-### Troubleshooting
-
-Common issues and solutions:
-
-1. **Missing Dependencies**
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-2. **Database Errors**
-   - Ensure SQLite is available
-   - Check database permissions
-   - Verify test database configuration
-
-3. **Integration Test Failures**
-   - Verify environment variables are set correctly
-   - Check API credentials are valid
-   - Ensure network connectivity
-
-4. **Test Discovery Issues**
-   - Ensure test files are named correctly (test_*.py)
-   - Verify test functions are named correctly (test_*)
-   - Check pytest configuration
-
-### Contributing Tests
-
-When contributing new tests:
-
-1. Follow the existing test structure and naming conventions
-2. Include both positive and negative test cases
-3. Mock external dependencies appropriately
-4. Add documentation for new test cases
-5. Ensure all tests pass before submitting PR
-
-### Additional Testing Resources
-
-- [pytest Documentation](https://docs.pytest.org/)
-- [FastAPI Testing Documentation](https://fastapi.tiangolo.com/tutorial/testing/)
-- [YTMusic API Documentation](https://ytmusicapi.readthedocs.io/)
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- [ytmusicapi](https://github.com/sigma67/ytmusicapi) for the YouTube Music API implementation
+- [FastAPI](https://fastapi.tiangolo.com/) for the web framework
+
+This project is built upon the excellent [ytmusicapi](https://github.com/sigma67/ytmusicapi) library. We extend our sincere gratitude to the
+ytmusicapi developers and contributors for creating and maintaining such a robust foundation that makes this wrapper possible. The ytmusicapi
+library provides the core functionality for interacting with YouTube's internal APIs, which this project leverages to provide a REST API
+interface. For more information about the underlying library, please visit the [ytmusicapi documentation](https://ytmusicapi.readthedocs.io/).
+
+## Disclaimer
+
+This project is an independent, unofficial implementation and is not affiliated with, endorsed by, or in any way officially connected to
+YouTube, YouTube Music, or Google LLC. The ytmusicapi library that this project depends on provides unofficial access to YouTube's internal
+APIs. While we strive to maintain compatibility, please be aware that as an unofficial API, functionality may change without notice if YouTube
+Music modifies their internal systems. Use of this software is at your own discretion and risk.

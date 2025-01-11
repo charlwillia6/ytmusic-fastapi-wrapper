@@ -97,4 +97,4 @@ venv/
 .vscode/
 
 # SQLite Databases
-sessions.db
+*.db
