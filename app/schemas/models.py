@@ -14,6 +14,7 @@ class CredentialsModel(BaseModel):
     client_id: str
     client_secret: str
     scopes: Optional[List[str]] = None
+    expires_in: Optional[int] = None
 
 class MessageResponse(BaseModel):
     message: str
@@ -55,4 +56,8 @@ class UploadArtistResponse(BaseModel):
     artist: Dict[str, Any]
 
 class UploadAlbumResponse(BaseModel):
-    album: Dict[str, Any] 
+    album: Dict[str, Any]
+
+class TokenResponse(BaseModel):
+    token: str
+    expires_in: int

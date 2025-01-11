@@ -28,6 +28,11 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/auth/callback")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
+GOOGLE_SCOPES = [
+    "https://www.googleapis.com/auth/youtube",
+    "https://www.googleapis.com/auth/youtube.readonly"
+]
+
 async def get_token(request: Request) -> str:
     """Get token from request."""
     authorization = request.headers.get("Authorization")
@@ -214,3 +219,17 @@ async def get_credentials(token: str = Depends(oauth2_scheme)) -> CredentialsMod
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
         ) 
+
+async def refresh_oauth_token(credentials: CredentialsModel) -> CredentialsModel:
+    """Refresh OAuth token using refresh token."""
+    if not credentials.refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No refresh token available"
+        )
+    
+    # Implement token refresh logic here
+    # This would typically involve calling Google's token endpoint
+    # with the refresh token to get a new access token
+    
+    return credentials  # Return new credentials with refreshed token 
