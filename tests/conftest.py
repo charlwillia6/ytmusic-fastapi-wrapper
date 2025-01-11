@@ -14,7 +14,6 @@ from datetime import datetime, timedelta, timezone
 import uuid
 from contextlib import ExitStack
 import os
-import python_multipart  # Required by starlette for form parsing
 
 # Remove any existing patches
 if hasattr(app, "dependency_overrides"):

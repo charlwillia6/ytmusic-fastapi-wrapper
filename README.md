@@ -22,6 +22,8 @@ ytmusic-fastapi-wrapper/
 │   │       └── router.py
 │   ├── core/
 │   │   ├── config.py
+|   |   ├── logger.py
+|   |   ├── middleware.py
 │   │   └── security.py
 │   ├── db/
 │   │   ├── models.py
@@ -35,15 +37,30 @@ ytmusic-fastapi-wrapper/
 │   ├── test_api/
 │   │   ├── test_auth.py
 │   │   ├── test_browse.py
+│   │   ├── test_explore.py
 │   │   ├── test_library.py
 │   │   ├── test_playlists.py
-│   │   └── test_search.py
+│   │   ├── test_podcasts.py
+│   │   ├── test_search.py
+│   │   ├── test_security.py
+│   │   ├── test_uploads.py
+│   │   └── test_watcg.py
 │   ├── test_services/
 │   │   └── test_ytmusic.py
 │   └── conftest.py
-├── .env
+├── logs/
+│   ├── app.log
+│   └── security.log
+├── scripts/
+|   ├── reacreate_db.py
+│   └── get_tokens.py
+├── .env.example
 ├── .gitignore
+├── API_USAGE.md
+├── client_secrets.json.example
 ├── Dockerfile
+├── LICENSE
+├── pytest.ini
 ├── README.md
 └── requirements.txt
 ```
