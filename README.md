@@ -62,6 +62,25 @@ ytmusic-fastapi-wrapper/
 - Python 3.8+
 - pip
 - Google OAuth2 credentials
+- Docker (optional, for containerized deployment)
+- Git
+
+## Environment Variables
+
+### Required
+
+- `GOOGLE_CLIENT_ID`: Your Google OAuth2 client ID
+- `GOOGLE_CLIENT_SECRET`: Your Google OAuth2 client secret
+- `GOOGLE_REDIRECT_URI`: OAuth2 callback URL
+
+### Optional
+
+- `DATABASE_URL`: Database connection string (default: sqlite:///./app.db)
+- `DEBUG`: Enable debug mode (default: false)
+- `RATE_LIMIT_MAX_REQUESTS`: Max requests per window (default: 50)
+- `RATE_LIMIT_WINDOW`: Time window in seconds (default: 60)
+- `BRUTE_FORCE_MAX_ATTEMPTS`: Max login attempts (default: 5)
+- `BRUTE_FORCE_WINDOW`: Brute force window in seconds (default: 300)
 
 ## Installation
 
@@ -151,6 +170,54 @@ Tests are written using pytest and include:
 - Authentication flow testing
 - Service layer mocking
 - Error handling verification
+
+## Security
+
+- Rate limiting (50 requests per minute per IP)
+- Brute force protection (5 attempts per 5 minutes)
+- Required User-Agent headers
+- OAuth2 token validation
+- HTTPS redirect in production
+
+## Docker Deployment
+
+Build and run the application using Docker:
+
+```bash
+#Build the image
+docker build -t ytmusic-api .
+
+#Run the container
+docker run -p 8000:8000 \
+-e GOOGLE_CLIENT_ID=your_client_id \
+-e GOOGLE_CLIENT_SECRET=your_client_secret \
+-e GOOGLE_REDIRECT_URI=your_redirect_uri \
+ytmusic-api
+```
+
+## API Documentation
+
+Please see [API_USAGE.md](API_USAGE.md) for detailed API documentation, or visit the interactive API documentation at:
+
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+The interactive documentation provides a complete reference of all endpoints, request/response schemas, and allows testing the API directly from your browser.
+
+## Troubleshooting
+
+### Common issues and solutions
+
+1. OAuth2 Authentication Errors
+   - Verify your Google OAuth2 credentials
+   - Ensure redirect URI matches exactly
+   - Check scope permissions
+2. Rate Limiting
+   - Default limit is 50 requests per minute
+   - Increase limits via environment variables if needed
+3. Database Issues
+   - Run `python scripts/recreate_db.py` to reset the database
+   - Check database connection string in .env
 
 ## Contributing
 
