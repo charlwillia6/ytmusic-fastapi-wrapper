@@ -83,11 +83,11 @@ ipython_log.py
 # celery beat schedule file
 celerybeat-schedule
 
-# dotenv
-.env
-
-# OAuth
+# Credentials and secrets
 client_secrets.json
+.env
+*.pem
+*.key
 
 # virtualenv
 venv/
@@ -98,3 +98,7 @@ venv/
 
 # SQLite Databases
 *.db
+
+# Google Cloud Platform
+app.yaml
+.gcloudignore
