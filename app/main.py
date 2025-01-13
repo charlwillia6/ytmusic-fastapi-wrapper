@@ -5,8 +5,16 @@ from app.api.v1.router import router as api_router
 from collections import defaultdict
 import time
 import os
+from app.core.docs import configure_swagger_oauth
 
-app = FastAPI()
+app = FastAPI(
+    title="YTMusic API FastAPI Wrapper",
+    description="A FastAPI wrapper for YouTube Music API",
+    version="0.1.0"
+)
+
+# Configure OAuth2 for Swagger UI
+configure_swagger_oauth(app)
 
 # Rate limiting configuration
 RATE_LIMIT_WINDOW = 60  # seconds

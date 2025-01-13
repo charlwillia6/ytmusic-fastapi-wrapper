@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Security
 from app.api.v1.endpoints import (
     auth,
     browse,
@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     uploads,
     watch
 )
+from app.core.security import get_current_user
 
 router = APIRouter()
 
@@ -23,3 +24,9 @@ router.include_router(playlists.router, prefix="/playlists", tags=["playlists"])
 router.include_router(podcasts.router, prefix="/podcasts", tags=["podcasts"])
 router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
 router.include_router(watch.router, prefix="/watch", tags=["watch"]) 
+
+@router.get("/protected-endpoint")
+async def protected_endpoint(
+    current_user = Security(get_current_user, scopes=["https://www.googleapis.com/auth/youtube"])
+):
+    return {"message": "This is a protected endpoint"} 
