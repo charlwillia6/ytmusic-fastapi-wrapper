@@ -7,6 +7,8 @@ import os
 from dotenv import load_dotenv
 import time
 from collections import defaultdict
+from google_auth_oauthlib.flow import Flow
+import json
 
 load_dotenv()
 
@@ -141,22 +143,50 @@ async def get_oauth_credentials(code: str, request: Request) -> CredentialsModel
             detail="Authorization code required"
         )
 
-    # For testing purposes, validate the code
-    if code == "invalid_code":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authorization code"
+    try:
+        # Load client secrets from file
+        with open('client_secrets.json', 'r') as f:
+            client_config = json.load(f)
+
+        # Create flow instance to handle the auth code flow
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=GOOGLE_SCOPES,
+            redirect_uri=GOOGLE_REDIRECT_URI
         )
 
-    # In production, this would validate the code and get real credentials
-    return CredentialsModel(
-        token="test_token",
-        refresh_token="test_refresh_token",
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        scopes=["https://www.googleapis.com/auth/youtube"]
-    )
+        # Exchange auth code for credentials
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+
+        # Handle potential None values with defaults
+        token = str(credentials.token) if credentials.token else ""
+        refresh_token = str(credentials.refresh_token) if credentials.refresh_token else ""
+        client_id = str(credentials.client_id) if credentials.client_id else GOOGLE_CLIENT_ID
+        
+        # Calculate expires_in as integer
+        expires_in = None
+        if credentials.expiry:
+            try:
+                expires_in = int(credentials.expiry.timestamp())
+            except (AttributeError, ValueError):
+                expires_in = None
+
+        return CredentialsModel(
+            token=token,
+            refresh_token=refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",  # This is a constant
+            client_id=client_id,
+            client_secret=GOOGLE_CLIENT_SECRET,
+            scopes=list(credentials.scopes) if credentials.scopes else GOOGLE_SCOPES,
+            expires_in=expires_in
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Failed to exchange authorization code: {str(e)}"
+        )
 
 def check_rate_limit(request: Request) -> None:
     """Check rate limiting."""

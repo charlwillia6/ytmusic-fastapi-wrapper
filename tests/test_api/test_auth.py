@@ -87,17 +87,16 @@ def test_oauth_callback_success(test_client, mock_credentials):
     async def mock_get_oauth(*args, **kwargs):
         return mock_credentials
 
-    with patch("app.core.security.get_oauth_credentials", side_effect=mock_get_oauth):
+    with patch("app.api.v1.endpoints.auth.get_oauth_credentials", side_effect=mock_get_oauth):
         response = test_client.get("/api/v1/auth/callback", params={"code": "valid_code"})
         assert response.status_code == 200
         data = response.json()
-        # Only check the fields we know are returned by the endpoint
-        assert "token" in data
-        assert "refresh_token" in data
-        assert "client_id" in data
-        assert "expires_in" in data
-        assert data["token"] == mock_credentials.token
-        assert data["refresh_token"] == mock_credentials.refresh_token
+        assert data == {
+            "token": mock_credentials.token,
+            "refresh_token": mock_credentials.refresh_token,
+            "client_id": mock_credentials.client_id,
+            "expires_in": mock_credentials.expires_in
+        }
 
 def test_oauth_callback_test_code(test_client):
     """Test OAuth callback endpoint with test_code"""
@@ -111,11 +110,9 @@ def test_oauth_callback_test_code(test_client):
 
 def test_oauth_callback_invalid_code(test_client):
     """Test OAuth callback endpoint with invalid code"""
-    with patch("app.core.security.get_oauth_credentials", 
-              side_effect=HTTPException(status_code=401, detail="Invalid authorization code")):
-        response = test_client.get("/api/v1/auth/callback", params={"code": "invalid_code"})
-        assert response.status_code == 401
-        assert response.json()["detail"] == "Invalid authorization code"
+    response = test_client.get("/api/v1/auth/callback", params={"code": "invalid_code"})
+    assert response.status_code == 401
+    assert "Failed to exchange authorization code" in response.json()["detail"]
 
 def test_get_me_success(test_client, mock_credentials):
     """Test get_me endpoint - success case"""
