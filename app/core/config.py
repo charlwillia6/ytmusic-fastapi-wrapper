@@ -41,5 +41,6 @@ for var in required_vars:
 
 # OAuth scopes
 SCOPES: List[str] = [
+    'https://www.googleapis.com/auth/youtube',
     'https://www.googleapis.com/auth/youtube.readonly'
 ] 

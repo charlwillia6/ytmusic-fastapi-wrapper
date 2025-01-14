@@ -15,15 +15,10 @@ class YTMusicService:
 
     def _create_client(self) -> YTMusic:
         """Create YTMusic client from credentials."""
-        oauth_dict = {
-            "token": self.credentials.token,
-            "refresh_token": self.credentials.refresh_token,
-            "token_uri": self.credentials.token_uri,
-            "client_id": self.credentials.client_id,
-            "client_secret": self.credentials.client_secret,
-            "scopes": self.credentials.scopes if self.credentials.scopes else []
+        headers = {
+            "authorization": f"Bearer {self.credentials.token}"
         }
-        return YTMusic(auth=json.dumps(oauth_dict))
+        return YTMusic(auth=headers)
 
     def search(
         self,
