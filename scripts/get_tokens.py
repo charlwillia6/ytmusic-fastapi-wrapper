@@ -12,7 +12,10 @@ def get_tokens() -> None:
         "web": {
             "client_id": os.getenv("GOOGLE_CLIENT_ID"),
             "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-            "redirect_uris": [os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000")],
+            "redirect_uris": [
+                os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/api/v1/auth/callback"), 
+                os.getenv("GOOGLE_REDIRECT_URI_DOCS", "http://localhost:8000/api/v1/docs/oauth2-redirect")
+            ],
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
         }

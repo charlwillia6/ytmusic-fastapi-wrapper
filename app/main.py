@@ -1,30 +1,77 @@
-from fastapi import FastAPI, Request, HTTPException, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.api.v1.router import router as api_router
-from collections import defaultdict
 import time
 import os
-from app.core.docs import configure_swagger_oauth
+from app.core.security import (
+    GOOGLE_SCOPES,
+    RATE_LIMIT_WINDOW,
+    RATE_LIMIT_MAX_REQUESTS,
+    BRUTE_FORCE_WINDOW,
+    BRUTE_FORCE_MAX_ATTEMPTS,
+    request_counts,
+    brute_force_store,
+    docs_redirect_uri,
+    GOOGLE_CLIENT_ID
+)
+from fastapi.openapi.utils import get_openapi
+from dotenv import load_dotenv
+from urllib.parse import urlparse
+
+load_dotenv()
+
+# Extract just the path portion from the full docs redirect URI
+docs_redirect_path = urlparse(docs_redirect_uri).path
 
 app = FastAPI(
     title="YTMusic API FastAPI Wrapper",
-    description="A FastAPI wrapper for YouTube Music API",
-    version="0.1.0"
+    openapi_url="/api/v1/openapi.json",
+    docs_url="/api/v1/docs",
+    redoc_url="/api/v1/redoc",
+    swagger_ui_oauth2_redirect_url=docs_redirect_path,
+    swagger_ui_init_oauth={
+        "clientId": GOOGLE_CLIENT_ID,
+        "scopes": " ".join(GOOGLE_SCOPES),
+        "usePkceWithAuthorizationCodeGrant": True,
+        "additionalQueryStringParams": {
+            "access_type": "offline",
+            "prompt": "consent"
+        }
+    },
+    openapi_tags=[{"name": "auth", "description": "Authentication operations"}],
 )
 
-# Configure OAuth2 for Swagger UI
-configure_swagger_oauth(app)
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="YTMusic API FastAPI Wrapper",
+        version="0.1.0",
+        description="Web API Wrapper for YTMusicAPI",
+        routes=app.routes,
+    )
+    openapi_schema["components"]["securitySchemes"] = {
+        "google_oauth2": {
+            "type": "oauth2",
+            "flows": {
+                "authorizationCode": {
+                    "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+                    "tokenUrl": "https://oauth2.googleapis.com/token",
+                    "refreshUrl": "https://oauth2.googleapis.com/token",
+                    "scopes": {
+                        "https://www.googleapis.com/auth/youtube": "Access and manage your YouTube account",
+                        "https://www.googleapis.com/auth/youtube.readonly": "View your YouTube account"
+                    }
+                }
+            }
+        }
+    }
+    openapi_schema["security"] = [{"google_oauth2": GOOGLE_SCOPES}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
-# Rate limiting configuration
-RATE_LIMIT_WINDOW = 60  # seconds
-RATE_LIMIT_MAX_REQUESTS = 50
-request_counts = defaultdict(list)  # IP -> list of timestamps
-
-# Brute force protection
-BRUTE_FORCE_WINDOW = 300  # 5 minutes
-BRUTE_FORCE_MAX_ATTEMPTS = 5
-brute_force_store = defaultdict(list)  # IP -> list of timestamps
+app.openapi = custom_openapi
 
 # CORS configuration
 origins = [
@@ -40,7 +87,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
     """Security middleware that handles all security checks."""

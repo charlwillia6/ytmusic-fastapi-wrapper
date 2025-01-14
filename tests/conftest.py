@@ -14,10 +14,7 @@ from datetime import datetime, timedelta, timezone
 import uuid
 from contextlib import ExitStack
 import os
-
-# Remove any existing patches
-if hasattr(app, "dependency_overrides"):
-    app.dependency_overrides.clear()
+from importlib import reload
 
 @pytest.fixture(scope="function")
 def test_db():
@@ -39,6 +36,46 @@ def test_db():
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture(autouse=True)
+def mock_env_vars(monkeypatch):
+    """Mock environment variables."""
+    test_env = {
+        # Required OAuth variables
+        "GOOGLE_CLIENT_ID": "test_client_id",
+        "GOOGLE_CLIENT_SECRET": "test_client_secret",
+        "GOOGLE_REDIRECT_URI": "http://localhost:8000/api/v1/auth/callback",
+        "GOOGLE_REDIRECT_URI_DOCS": "http://localhost:8000/api/v1/docs/oauth2-redirect",
+        # Optional variables with test values
+        "DEBUG": "true",
+        "RATE_LIMIT_MAX_REQUESTS": "50",
+        "RATE_LIMIT_WINDOW": "60",
+        "BRUTE_FORCE_MAX_ATTEMPTS": "5",
+        "BRUTE_FORCE_WINDOW": "300"
+    }
+    
+    # Use monkeypatch to ensure environment variables are properly overridden
+    for key, value in test_env.items():
+        monkeypatch.setenv(key, value)
+
+    # Reload security module to pick up new environment variables
+    import app.core.security
+    reload(app.core.security)
+
+@pytest.fixture
+def test_client(test_db):
+    """Create a test client"""
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            test_db.rollback()
+    
+    app.dependency_overrides[get_db] = override_get_db
+    
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()
 
 @pytest.fixture
 def test_credentials():
@@ -63,21 +100,6 @@ def test_google_creds(test_credentials):
         client_secret=test_credentials.client_secret,
         scopes=test_credentials.scopes
     )
-
-@pytest.fixture
-def test_client(test_db):
-    """Create a test client"""
-    def override_get_db():
-        try:
-            yield test_db
-        finally:
-            test_db.rollback()
-    
-    app.dependency_overrides[get_db] = override_get_db
-    
-    with TestClient(app) as client:
-        yield client
-    app.dependency_overrides.clear()
 
 def create_test_session(db, test_credentials):
     """Create a test session in the database"""
@@ -112,36 +134,6 @@ def mock_auth_header(test_db, test_credentials):
     return {"Authorization": f"Bearer {session_token}"}
 
 @pytest.fixture
-def authenticated_client(test_client, test_credentials, mock_auth_header, mock_security):
-    """Create a test client with authentication."""
-    client = TestClient(app)  # Create a new client instance
-    
-    def _authenticated_request(*args, **kwargs):
-        # Add authorization header to all requests
-        headers = kwargs.pop("headers", {})
-        headers.update(mock_auth_header)
-        headers.setdefault("User-Agent", "Test Client")
-        
-        # Skip security checks for non-security/auth tests
-        url = str(kwargs.get("url", ""))
-        if not any(path in url for path in ["/security", "/auth"]):
-            headers["X-Skip-Security-Checks"] = "true"
-        
-        kwargs["headers"] = headers
-        return client.request(*args, **kwargs)
-
-    # Patch the client's request methods
-    client.get = lambda *a, **kw: _authenticated_request("GET", *a, **kw)
-    client.post = lambda *a, **kw: _authenticated_request("POST", *a, **kw)
-    client.put = lambda *a, **kw: _authenticated_request("PUT", *a, **kw)
-    client.delete = lambda *a, **kw: _authenticated_request("DELETE", *a, **kw)
-    
-    with mock_security:
-        yield client
-
-import json
-
-@pytest.fixture
 def mock_security(test_credentials):
     """Mock security-related functions"""
     async def mock_verify_token(token: str) -> dict:
@@ -171,16 +163,33 @@ def mock_security(test_credentials):
     stack.enter_context(patch("app.core.security.get_current_user", AsyncMock(side_effect=mock_get_current_user)))
     return stack
 
-@pytest.fixture(autouse=True)
-def mock_env_vars():
-    """Mock environment variables."""
-    with patch.dict(os.environ, {
-        "GOOGLE_CLIENT_ID": "test_client_id",
-        "GOOGLE_CLIENT_SECRET": "test_client_secret",
-        "GOOGLE_REDIRECT_URI": "http://localhost:8000/api/v1/auth/callback",
-        "DEBUG": "true"
-    }):
-        yield
+@pytest.fixture
+def authenticated_client(test_client, test_credentials, mock_auth_header, mock_security):
+    """Create a test client with authentication."""
+    client = TestClient(app)  # Create a new client instance
+    
+    def _authenticated_request(*args, **kwargs):
+        # Add authorization header to all requests
+        headers = kwargs.pop("headers", {})
+        headers.update(mock_auth_header)
+        headers.setdefault("User-Agent", "Test Client")
+        
+        # Skip security checks for non-security/auth tests
+        url = str(kwargs.get("url", ""))
+        if not any(path in url for path in ["/security", "/auth"]):
+            headers["X-Skip-Security-Checks"] = "true"
+        
+        kwargs["headers"] = headers
+        return client.request(*args, **kwargs)
+
+    # Patch the client's request methods
+    client.get = lambda *a, **kw: _authenticated_request("GET", *a, **kw)
+    client.post = lambda *a, **kw: _authenticated_request("POST", *a, **kw)
+    client.put = lambda *a, **kw: _authenticated_request("PUT", *a, **kw)
+    client.delete = lambda *a, **kw: _authenticated_request("DELETE", *a, **kw)
+    
+    with mock_security:
+        yield client
 
 @pytest.fixture
 def security_test_client(test_db):

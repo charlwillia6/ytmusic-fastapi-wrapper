@@ -88,7 +88,8 @@ ytmusic-fastapi-wrapper/
 
 - `GOOGLE_CLIENT_ID`: Your Google OAuth2 client ID
 - `GOOGLE_CLIENT_SECRET`: Your Google OAuth2 client secret
-- `GOOGLE_REDIRECT_URI`: OAuth2 callback URL
+- `GOOGLE_REDIRECT_URI`: OAuth2 callback URL (e.g., <http://localhost:8000/api/v1/auth/callback>)
+- `GOOGLE_REDIRECT_URI_DOCS`: OAuth2 Swagger docs redirect URL (e.g., <http://localhost:8000/api/v1/docs/oauth2-redirect>)
 
 ### Optional
 
@@ -149,7 +150,7 @@ ytmusic-fastapi-wrapper/
    uvicorn app.main:app --reload
    ```
 
-2. Visit `http://localhost:8000/docs` for the interactive API documentation.
+2. Visit `http://localhost:8000/api/v1/docs` for the interactive API documentation.
 
 ## Testing
 
@@ -201,14 +202,22 @@ Tests are written using pytest and include:
 Build and run the application using Docker:
 
 ```bash
-#Build the image
+# Build the image
 docker build -t ytmusic-api .
 
-#Run the container
+# Run the container
 docker run -p 8000:8000 \
 -e GOOGLE_CLIENT_ID=your_client_id \
 -e GOOGLE_CLIENT_SECRET=your_client_secret \
 -e GOOGLE_REDIRECT_URI=your_redirect_uri \
+-e GOOGLE_REDIRECT_URI_DOCS=your_docs_redirect_uri \
+-e DATABASE_URL=sqlite:///./app.db \
+-e DEBUG=False \
+# Optional rate limiting and security
+-e RATE_LIMIT_MAX_REQUESTS=50 \
+-e RATE_LIMIT_WINDOW=60 \
+-e BRUTE_FORCE_MAX_ATTEMPTS=5 \
+-e BRUTE_FORCE_WINDOW=300 \
 ytmusic-api
 ```
 
@@ -216,8 +225,8 @@ ytmusic-api
 
 Please see [API_USAGE.md](API_USAGE.md) for detailed API documentation, or visit the interactive API documentation at:
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `http://localhost:8000/api/v1/docs`
+- ReDoc: `http://localhost:8000/api/v1/redoc`
 
 The interactive documentation provides a complete reference of all endpoints, request/response schemas, and allows testing the API directly from your browser.
 

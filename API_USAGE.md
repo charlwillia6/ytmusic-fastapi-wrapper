@@ -1,5 +1,21 @@
 # API Documentation
 
+For detailed API documentation, visit the interactive API documentation at:
+
+- Swagger UI: `http://localhost:8000/api/v1/docs`
+- ReDoc: `http://localhost:8000/api/v1/redoc`
+
+## Configuration
+
+### Environment Variables
+
+The following environment variables must be set in the .env file and the app.yaml file for Google Cloud deployment:
+
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=<http://localhost:8000/api/v1/auth/callback>
+GOOGLE_REDIRECT_URI_DOCS=<http://localhost:8000/api/v1/docs/oauth2-redirect>
+
 ## Authentication
 
 All endpoints except `/auth/oauth-url` and `/auth/login` require authentication. Include an Authorization header with a Bearer token:

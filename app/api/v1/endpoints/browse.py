@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Dict, Any, List, Optional, Union
-from app.core.security import get_current_user, get_credentials
+from typing import Dict, Any, List, Optional
+from app.core.security import get_current_user
 from app.schemas.models import (
     CredentialsModel,
     SearchResults,
@@ -13,11 +13,11 @@ router = APIRouter()
 
 @router.get("/home", response_model=SearchResults)
 async def get_home(
-    credentials: CredentialsModel = Depends(get_credentials)
+    current_user: CredentialsModel = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Get home page content."""
     try:
-        ytmusic = YTMusicService(credentials)
+        ytmusic = YTMusicService(current_user)
         results = ytmusic.get_home()
         if isinstance(results, list):
             return {"results": results}

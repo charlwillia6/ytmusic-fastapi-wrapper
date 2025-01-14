@@ -1,27 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.core.security import (
     get_current_user, 
     get_oauth_credentials, 
     refresh_oauth_token,
     GOOGLE_CLIENT_ID, 
-    GOOGLE_REDIRECT_URI,
-    GOOGLE_SCOPES
+    GOOGLE_SCOPES,
+    get_redirect_uri,
+    docs_redirect_uri,
+    DEBUG
 )
+from app.core.logger import log_security_event
 from app.schemas.models import CredentialsModel, AuthResponse, TokenResponse
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from fastapi.responses import RedirectResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+import json
+from urllib.parse import urlparse
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
-def build_oauth_url() -> str:
+# Extract just the path portion from the docs redirect URI
+docs_redirect_path = urlparse(docs_redirect_uri).path
+
+def build_oauth_url(for_docs=False) -> str:
     """Build OAuth URL with all necessary parameters."""
+    redirect_uri = get_redirect_uri(for_docs)
     return (
         "https://accounts.google.com/o/oauth2/v2/auth?"
         f"client_id={GOOGLE_CLIENT_ID}&"
-        f"redirect_uri={GOOGLE_REDIRECT_URI}&"
+        f"redirect_uri={redirect_uri}&"
         "response_type=code&"
         f"scope={'+'.join(GOOGLE_SCOPES)}&"
         "access_type=offline&"
@@ -32,7 +41,13 @@ def build_oauth_url() -> str:
 @limiter.limit("5/minute")
 async def login_redirect(request: Request):
     """Redirect to Google OAuth login page."""
-    return RedirectResponse(url=build_oauth_url())
+    return RedirectResponse(url=build_oauth_url(), status_code=307)
+
+@router.get("/docs-login")
+@limiter.limit("5/minute")
+async def docs_login_redirect(request: Request):
+    """Redirect to Google OAuth login page for docs."""
+    return RedirectResponse(url=build_oauth_url(for_docs=True), status_code=307)
 
 @router.get("/callback")
 @limiter.limit("5/minute")
@@ -47,7 +62,26 @@ async def oauth_callback(code: str, request: Request) -> Dict[str, Any]:
                 "client_id": "test_client_id"
             }
             
-        credentials = await get_oauth_credentials(code, request)
+        # Check if this is a docs callback by looking at the referer and path
+        referer = request.headers.get("referer", "")
+        for_docs = (
+            referer.endswith("/docs") or 
+            request.url.path.endswith("/docs/oauth2-redirect") or
+            request.url.path == docs_redirect_path  # Use the path from the docs redirect URI
+        )
+        
+        if DEBUG:
+            log_security_event(
+                "OAuth callback request details",
+                json.dumps({
+                    "referer": referer,
+                    "path": request.url.path,
+                    "for_docs": for_docs,
+                    "full_url": str(request.url)
+                })
+            )
+            
+        credentials = await get_oauth_credentials(code, request, for_docs)
         return {
             "token": credentials.token,
             "refresh_token": credentials.refresh_token,
@@ -57,6 +91,16 @@ async def oauth_callback(code: str, request: Request) -> Dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
+        if DEBUG:
+            log_security_event(
+                f"Failed to handle OAuth callback: {str(e)}",
+                json.dumps({
+                    "error": str(e),
+                    "referer": referer,
+                    "path": request.url.path,
+                    "for_docs": for_docs
+                })
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization code"
@@ -135,4 +179,4 @@ async def logout(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to logout"
-        ) 
+        )
