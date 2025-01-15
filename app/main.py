@@ -21,8 +21,9 @@ from urllib.parse import urlparse
 
 load_dotenv()
 
-# Extract just the path portion from the full docs redirect URI
-docs_redirect_path = urlparse(docs_redirect_uri).path
+# Extract just the path portion from the full docs redirect URI and ensure it starts with a forward slash
+parsed_uri = urlparse(docs_redirect_uri)
+docs_redirect_path = parsed_uri.path if parsed_uri.path.startswith('/') else f"/{parsed_uri.path}"
 
 app = FastAPI(
     title="YTMusic API FastAPI Wrapper",
@@ -48,7 +49,7 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="YTMusic API FastAPI Wrapper",
         version="0.1.0",
-        description="Web API Wrapper for YTMusicAPI",
+        description="A YTMusic API web framework created with FastAPI",
         routes=app.routes,
     )
     openapi_schema["components"]["securitySchemes"] = {

@@ -102,3 +102,7 @@ venv/
 # Google Cloud Platform
 app.yaml
 .gcloudignore
+
+# Docker
+*.tar
+*.tar.gz

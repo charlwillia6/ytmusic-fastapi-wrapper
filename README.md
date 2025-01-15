@@ -203,9 +203,15 @@ Build and run the application using Docker:
 
 ```bash
 # Build the image
-docker build -t ytmusic-api .
+docker build -t ytm-api-server .
 
 # Run the container
+# Optional rate limiting and security settings:
+# - RATE_LIMIT_MAX_REQUESTS=50
+# - RATE_LIMIT_WINDOW=60
+# - BRUTE_FORCE_MAX_ATTEMPTS=5
+# - BRUTE_FORCE_WINDOW=300
+
 docker run -p 8000:8000 \
 -e GOOGLE_CLIENT_ID=your_client_id \
 -e GOOGLE_CLIENT_SECRET=your_client_secret \
@@ -213,12 +219,11 @@ docker run -p 8000:8000 \
 -e GOOGLE_REDIRECT_URI_DOCS=your_docs_redirect_uri \
 -e DATABASE_URL=sqlite:///./app.db \
 -e DEBUG=False \
-# Optional rate limiting and security
 -e RATE_LIMIT_MAX_REQUESTS=50 \
 -e RATE_LIMIT_WINDOW=60 \
 -e BRUTE_FORCE_MAX_ATTEMPTS=5 \
 -e BRUTE_FORCE_WINDOW=300 \
-ytmusic-api
+ytm-api-server
 ```
 
 ## API Documentation
@@ -229,6 +234,61 @@ Please see [API_USAGE.md](API_USAGE.md) for detailed API documentation, or visit
 - ReDoc: `http://localhost:8000/api/v1/redoc`
 
 The interactive documentation provides a complete reference of all endpoints, request/response schemas, and allows testing the API directly from your browser.
+
+## Google Cloud Setup
+
+### Prerequisites for Google Cloud
+
+- Google Cloud CLI installed
+- Google Cloud account and project created
+- OAuth 2.0 Credentials configured in Google Cloud
+- Logged into Google Cloud CLI (`gcloud auth login`)
+
+### Enable Required APIs
+
+Run the following commands to enable the necessary Google Cloud APIs:
+
+```bash
+# Authenticate with Google Cloud
+gcloud auth login
+
+# Set your project ID
+gcloud config set project YOUR_PROJECT_ID
+
+# Enable Cloud Run API
+gcloud services enable run.googleapis.com containerregistry.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+
+# Build and tag the image
+gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/ytmusic-api-server-repo/ytmusic-api-server
+
+# Alternatively, build locally and push
+docker build -t us-central1-docker.pkg.dev/YOUR_PROJECT_ID/ytmusic-api-server-repo/ytmusic-api-server .
+docker push us-central1-docker.pkg.dev/YOUR_PROJECT_ID/ytmusic-api-server-repo/ytmusic-api-server
+
+# Deploy
+gcloud run deploy ytmusic-api-server \
+  --image us-central1-docker.pkg.dev/YOUR_PROJECT_ID/ytmusic-api-server-repo/ytmusic-api-server \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8000 \
+  --set-env-vars="\
+  GOOGLE_CLIENT_ID=your_client_id,\ GOOGLE_CLIENT_SECRET=your_client_secret,\ GOOGLE_REDIRECT_URI=https://YOUR_REDIRECT_BASE_URL/api/v1/auth/callback,\
+  GOOGLE_REDIRECT_URI_DOCS=https:///YOUR_REDIRECT_BASE_URL/api/v1/docs/oauth2-redirect,\
+  DEBUG=False,\
+  RATE_LIMIT_MAX_REQUESTS=50,\
+  RATE_LIMIT_WINDOW=60,\
+  BRUTE_FORCE_MAX_ATTEMPTS=5,\
+  BRUTE_FORCE_WINDOW=300"
+```
+
+These APIs enable core services needed for deploying and running your application:
+
+- Cloud Run: For running containerized applications
+- Secret Manager: For secure environment variable management
+- IAM: For managing service accounts and permissions
+
+After enabling these APIs, you'll be ready to proceed with deploying your application to Google Cloud.
 
 ## Troubleshooting
 
