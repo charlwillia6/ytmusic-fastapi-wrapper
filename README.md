@@ -54,8 +54,10 @@ ytmusic-fastapi-wrapper/
 ├── scripts/
 |   ├── reacreate_db.py
 │   └── get_tokens.py
+├── .dockerignore
 ├── .env.example
 ├── .gitignore
+├── app.yaml.example
 ├── API_USAGE.md
 ├── client_secrets.json.example
 ├── Dockerfile
